@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <title>Stock - La Pollería 2.0</title>
+  <style>
+    :root{--orange:#ff7300;--orange2:#ff9f2e;--black:#101114;--panel:#202228;--panel2:#2b2e36;--text:#f7f7f7;--muted:#b8bbc3;--green:#35c76f;--red:#ff555e;--line:#3b3e47}
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{margin:0;min-height:100%;background:var(--black);color:var(--text);font-family:Arial,sans-serif}
+    button,input,select{font:inherit}button{cursor:pointer}
+    .top{position:sticky;top:0;z-index:10;background:#090a0c;border-bottom:3px solid var(--orange);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+    .brand{display:flex;align-items:center;gap:13px}.logo{width:50px;height:50px;border-radius:14px;background:var(--orange);display:grid;place-items:center;font-size:28px;color:#111}
+    h1,h2,h3,p{margin:0}h1{font-size:25px}.subtitle,.muted{color:var(--muted)}.subtitle{margin-top:3px}
+    .top-actions{display:flex;gap:8px}.top-btn{border:1px solid #484b55;background:#24272e;color:#fff;border-radius:11px;padding:11px 14px;min-height:44px;font-weight:700}
+    .tabs{display:flex;gap:8px;padding:12px 18px;background:#17191e;overflow-x:auto}
+    .tab{border:0;background:transparent;color:#c6c8ce;border-radius:10px;padding:12px 16px;min-height:46px;font-weight:800;white-space:nowrap}
+    .tab.active{background:var(--orange);color:#111}.page{padding:18px 22px 30px}.panel[hidden]{display:none}
+    .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}.stat{background:var(--panel);border-radius:14px;padding:14px 17px}.stat strong{display:block;font-size:29px;margin-top:3px}.stat.alert strong{color:var(--orange2)}
+    .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+    .search,.select,.field{background:#f5f5f5;color:#171717;border:0;border-radius:11px;padding:13px 14px;min-height:48px}.search{flex:1;min-width:220px}.select{min-width:170px}
+    .primary{border:0;background:var(--orange);color:#111;border-radius:11px;padding:13px 17px;min-height:48px;font-weight:900}.secondary{border:1px solid #484b55;background:#2a2d34;color:#fff;border-radius:10px;padding:11px 14px;min-height:44px;font-weight:700}.danger{border-color:#7d3338;color:#ff969c}
+    .products{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}.product{background:var(--panel);border:2px solid transparent;border-radius:16px;padding:15px;display:flex;flex-direction:column;gap:11px;min-width:0}.product.low{border-color:var(--orange2);background:#2b251f}.product.zero{border-color:var(--red);background:#2c2023}
+    .product-head{display:flex;gap:11px;align-items:center}.product-image{width:64px;height:64px;flex:0 0 64px;border-radius:13px;background:#353841;display:grid;place-items:center;font-size:31px;overflow:hidden}.product-image img{width:100%;height:100%;object-fit:cover}.product-name{font-size:19px;font-weight:900;overflow-wrap:anywhere}.small{font-size:13px;color:var(--muted);margin-top:3px}
+    .status{display:flex;align-items:center;gap:7px;font-weight:800}.dot{width:10px;height:10px;border-radius:50%;background:var(--green)}.low .dot{background:var(--orange2)}.zero .dot{background:var(--red)}
+    .counter{display:grid;grid-template-columns:52px 1fr 52px;align-items:center;gap:8px}.counter button{border:0;border-radius:11px;min-height:52px;background:#383b44;color:#fff;font-size:26px;font-weight:900}.counter button.plus{background:var(--orange);color:#111}.count{text-align:center;font-size:24px;font-weight:900;white-space:nowrap}.minimum{text-align:center;color:var(--muted);font-size:13px}.product-actions{display:flex;gap:7px}.product-actions button{flex:1}
+    .empty{text-align:center;color:var(--muted);padding:36px 15px}.order-groups{display:grid;gap:16px;margin-top:16px}.supplier{background:var(--panel);border-radius:16px;padding:17px}.supplier-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:11px}.supplier h3{font-size:20px}.order-line{display:grid;grid-template-columns:1fr 150px;gap:12px;align-items:center;padding:11px 0;border-top:1px solid var(--line)}.order-qty{display:flex;align-items:center;gap:7px}.order-qty input{width:72px;text-align:center}.warning{color:var(--orange2);font-weight:800}
+    .history-toolbar{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}.history{background:var(--panel);border-radius:15px;overflow:hidden}.history-row{display:grid;grid-template-columns:150px 1fr 130px 1fr;gap:10px;padding:12px 15px;border-bottom:1px solid var(--line);align-items:center}.history-row:last-child{border-bottom:0}.positive{color:var(--green);font-weight:900}.negative{color:#ff8f96;font-weight:900}
+    .settings{display:grid;grid-template-columns:1fr 1fr;gap:14px}.settings-box{background:var(--panel);border-radius:16px;padding:18px}.settings-box h3{margin-bottom:8px}.settings-box p{color:var(--muted);margin-bottom:14px;line-height:1.35}.button-row{display:flex;gap:8px;flex-wrap:wrap}
+    .modal-backdrop{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.75);display:grid;place-items:center;padding:18px}.modal-backdrop[hidden]{display:none}.modal{width:min(790px,96vw);max-height:94vh;overflow:auto;background:#202228;border:1px solid #4a4d56;border-radius:18px;padding:20px}.modal-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.close{width:44px;height:44px;border-radius:10px;border:1px solid #4b4e57;background:#30333b;color:#fff;font-size:22px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-top:17px}.form-grid label{display:flex;flex-direction:column;gap:6px;font-weight:800}.wide{grid-column:1/-1}.image-row{display:grid;grid-template-columns:90px 1fr;gap:13px;align-items:center}.preview{width:90px;height:90px;border-radius:14px;background:#353841;display:grid;place-items:center;font-size:38px;overflow:hidden}.preview img{width:100%;height:100%;object-fit:cover}.image-buttons{display:flex;gap:7px;flex-wrap:wrap}.image-buttons label{display:block}.file{display:none}.form-actions{display:flex;justify-content:flex-end;gap:9px;margin-top:18px}
+    .toast{position:fixed;left:50%;bottom:22px;z-index:50;transform:translateX(-50%);background:#fff;color:#161616;padding:13px 18px;border-radius:12px;font-weight:800;box-shadow:0 8px 30px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:.2s}.toast.show{opacity:1}
+    @media(max-width:900px){.products{grid-template-columns:repeat(2,minmax(0,1fr))}.history-row{grid-template-columns:120px 1fr 100px}.history-note{display:none}}
+    @media(max-width:620px){h1{font-size:19px}.page{padding:14px}.top-actions{display:none}.stats,.settings{grid-template-columns:1fr}.products{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr}.wide{grid-column:auto}.history-row{grid-template-columns:1fr 1fr}.order-line{grid-template-columns:1fr}.supplier-head{align-items:flex-start;flex-direction:column}}
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><div class="logo">📦</div><div><h1>STOCK · LA POLLERÍA 2.0</h1><p class="subtitle">Control rápido de productos y almacén</p></div></div>
+    <div class="top-actions"><button class="top-btn" id="backupTop">💾 Copia</button><button class="primary" id="newTop">＋ Producto</button></div>
+  </header>
+  <nav class="tabs">
+    <button class="tab active" data-tab="stock">📦 STOCK</button>
+    <button class="tab" data-tab="orders">🛒 HAY QUE PEDIR <span id="orderBadge"></span></button>
+    <button class="tab" data-tab="history">📋 HISTORIAL</button>
+    <button class="tab" data-tab="settings">⚙️ CONFIGURACIÓN</button>
+  </nav>
+  <main class="page">
+    <section class="panel" id="panel-stock">
+      <div class="stats">
+        <div class="stat"><span class="muted">Productos</span><strong id="totalStat">0</strong></div>
+        <div class="stat"><span class="muted">Stock correcto</span><strong id="okStat">0</strong></div>
+        <div class="stat alert"><span class="muted">Hay que pedir</span><strong id="lowStat">0</strong></div>
+      </div>
+      <div class="toolbar">
+        <input class="search" id="search" type="search" placeholder="🔎 Buscar un producto…">
+        <select class="select" id="categoryFilter"><option value="">Todas las categorías</option></select>
+        <button class="primary" id="newProduct">＋ AÑADIR PRODUCTO</button>
+      </div>
+      <div class="products" id="productGrid"></div>
+    </section>
+
+    <section class="panel" id="panel-orders" hidden>
+      <h2>🛒 Productos que hay que pedir</h2>
+      <p class="subtitle">La cantidad recomendada completa el stock hasta el nivel ideal.</p>
+      <div class="order-groups" id="orderGroups"></div>
+    </section>
+
+    <section class="panel" id="panel-history" hidden>
+      <div class="history-toolbar"><div><h2>📋 Historial de movimientos</h2><p class="subtitle">Entradas, salidas, correcciones y pedidos recibidos.</p></div><button class="secondary danger" id="clearHistory">Vaciar historial</button></div>
+      <div class="history" id="historyList"></div>
+    </section>
+
+    <section class="panel" id="panel-settings" hidden>
+      <h2>⚙️ Configuración</h2>
+      <div class="settings" style="margin-top:16px">
+        <div class="settings-box"><h3>💾 Copia de seguridad</h3><p>Guarda todos los productos, fotografías, proveedores e historial en un archivo. Haz una copia antes de desinstalar o cambiar de tablet.</p><div class="button-row"><button class="primary" id="backupBtn">Hacer copia</button><button class="secondary" id="restoreBtn">Restaurar copia</button></div></div>
+        <div class="settings-box"><h3>🔔 Avisos</h3><p>La tablet avisará cuando un producto alcance su stock mínimo. Los avisos también quedan visibles dentro de la aplicación.</p><button class="secondary" id="testNotification">Probar aviso</button></div>
+        <div class="settings-box"><h3>📷 Imágenes</h3><p>Puedes elegir una fotografía de la tablet, guardar un enlace de imagen o abrir una búsqueda en Internet desde la ficha del producto.</p><button class="secondary" id="openProductForm">Añadir producto con imagen</button></div>
+        <div class="settings-box"><h3>🏪 Proveedores</h3><p>Guarda el nombre y teléfono en cada producto. La lista de compra se agrupa automáticamente y abre WhatsApp con el pedido preparado.</p><button class="secondary" data-go="orders">Ver pedidos pendientes</button></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="modal-backdrop" id="productModal" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <div class="modal-head"><div><h2 id="modalTitle">Añadir producto</h2><p class="subtitle">Todos los campos se podrán modificar después.</p></div><button class="close" id="closeModal" aria-label="Cerrar">×</button></div>
+      <form id="productForm">
+        <input id="editId" type="hidden">
+        <div class="form-grid">
+          <label class="wide">Nombre del producto<input class="field" id="nameField" required placeholder="Ej. Bandeja negra grande"></label>
+          <label>Categoría<input class="field" id="categoryField" list="categoryList" required placeholder="Ej. Envases"><datalist id="categoryList"></datalist></label>
+          <label>Controlar por<select class="field" id="unitField"><option>fardos</option><option>cajas</option><option>bandejas</option><option>paquetes</option><option>botes</option><option>rollos</option><option>sacos</option><option>unidades</option><option>kilos</option><option>docenas</option></select></label>
+          <label>Stock actual<input class="field" id="stockField" type="number" step="0.1" min="0" value="1" required></label>
+          <label>Avisar cuando queden<input class="field" id="minField" type="number" step="0.1" min="0" value="1" required></label>
+          <label>Stock ideal después de pedir<input class="field" id="idealField" type="number" step="0.1" min="0" value="4" required></label>
+          <label>Proveedor<input class="field" id="supplierField" placeholder="Ej. Proveedor de envases"></label>
+          <label>Teléfono o WhatsApp del proveedor<input class="field" id="phoneField" inputmode="tel" placeholder="Ej. 34600000000"></label>
+          <div class="wide image-row"><div class="preview" id="imagePreview">📦</div><div><strong>Imagen del producto</strong><div class="image-buttons" style="margin-top:8px"><label class="secondary">🖼️ Elegir de la tablet<input class="file" id="imageFile" type="file" accept="image/*"></label><button class="secondary" type="button" id="searchImage">🔎 Buscar en Internet</button><button class="secondary" type="button" id="clearImage">Quitar imagen</button></div></div></div>
+          <label class="wide">Enlace de imagen (opcional)<input class="field" id="imageUrlField" type="url" placeholder="https://…"></label>
+        </div>
+        <div class="form-actions"><button class="secondary" type="button" id="cancelModal">Cancelar</button><button class="primary" type="submit">GUARDAR PRODUCTO</button></div>
+      </form>
+    </div>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (function(){
+      var STORAGE_KEY='stockPolleriaV1';
+      var defaults={
+        products:[
+          {id:'p1',name:'Bandeja negra grande',category:'Envases',unit:'fardos',stock:4,min:2,ideal:6,supplier:'Proveedor de envases',phone:'',emoji:'🥡',image:''},
+          {id:'p2',name:'Guantes talla L',category:'Material',unit:'cajas',stock:3,min:1,ideal:5,supplier:'Proveedor de material',phone:'',emoji:'🧤',image:''},
+          {id:'p3',name:'Bolsas pequeñas',category:'Material',unit:'paquetes',stock:6,min:2,ideal:8,supplier:'Proveedor de material',phone:'',emoji:'🛍️',image:''},
+          {id:'p4',name:'Villarroy',category:'Elaborados',unit:'cajas',stock:2,min:1,ideal:4,supplier:'Proveedor de elaborados',phone:'',emoji:'🍗',image:''},
+          {id:'p5',name:'San Jacobos',category:'Elaborados',unit:'cajas',stock:2,min:1,ideal:4,supplier:'Proveedor de elaborados',phone:'',emoji:'🧀',image:''},
+          {id:'p6',name:'Salsa miel y mostaza',category:'Salsas',unit:'botes',stock:1,min:1,ideal:4,supplier:'Proveedor de salsas',phone:'',emoji:'🍯',image:''}
+        ],history:[],lastBackup:null
+      };
+      var state=load();
+      var currentImage='';
+      var notified={};
+      var $=function(id){return document.getElementById(id)};
+      var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+      function load(){try{var x=JSON.parse(localStorage.getItem(STORAGE_KEY));if(x&&Array.isArray(x.products))return x}catch(e){}return JSON.parse(JSON.stringify(defaults))}
+      function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(state))}
+      function niceNumber(n){return Number(n)%1===0?String(Number(n)):Number(n).toLocaleString('es-ES',{maximumFractionDigits:2})}
+      function unitText(p,n){return niceNumber(n)+' '+p.unit}
+      function status(p){if(p.stock<=0)return 'Agotado';if(p.stock<=p.min)return 'Hay que pedir';return 'Stock correcto'}
+      function toast(text){$('toast').textContent=text;$('toast').classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(function(){$('toast').classList.remove('show')},2600)}
+      function categories(){var list=[];state.products.forEach(function(p){if(list.indexOf(p.category)<0)list.push(p.category)});return list.sort()}
+      function renderFilters(){var current=$('categoryFilter').value;var options='<option value="">Todas las categorías</option>';categories().forEach(function(c){options+='<option value="'+esc(c)+'">'+esc(c)+'</option>'});$('categoryFilter').innerHTML=options;$('categoryFilter').value=current;$('categoryList').innerHTML=categories().map(function(c){return '<option value="'+esc(c)+'"></option>'}).join('')}
+      function productImage(p){return p.image?'<img src="'+esc(p.image)+'" alt="">':esc(p.emoji||'📦')}
+      function renderProducts(){
+        var q=$('search').value.trim().toLowerCase(),cat=$('categoryFilter').value;
+        var products=state.products.filter(function(p){return (!q||p.name.toLowerCase().indexOf(q)>=0)&&(!cat||p.category===cat)});
+        $('productGrid').innerHTML=products.length?products.map(function(p){
+          var cls=p.stock<=0?'zero':p.stock<=p.min?'low':'';
+          return '<article class="product '+cls+'"><div class="product-head"><div class="product-image">'+productImage(p)+'</div><div><div class="product-name">'+esc(p.name)+'</div><div class="small">'+esc(p.category)+' · por '+esc(p.unit)+'</div></div></div><div class="status"><span class="dot"></span>'+status(p)+'</div><div class="counter"><button data-change="-1" data-id="'+p.id+'" aria-label="Restar">−</button><div class="count">'+unitText(p,p.stock)+'</div><button class="plus" data-change="1" data-id="'+p.id+'" aria-label="Sumar">＋</button></div><div class="minimum">Avisar en '+unitText(p,p.min)+' · Ideal '+unitText(p,p.ideal)+'</div><div class="product-actions"><button class="secondary" data-adjust="'+p.id+'">Ajustar</button><button class="secondary" data-edit="'+p.id+'">Editar</button></div></article>'
+        }).join(''):'<div class="empty">No hay productos con esta búsqueda.</div>';
+        var low=state.products.filter(function(p){return p.stock<=p.min});
+        $('totalStat').textContent=state.products.length;$('okStat').textContent=state.products.length-low.length;$('lowStat').textContent=low.length;$('orderBadge').textContent=low.length?'('+low.length+')':'';
+      }
+      function renderOrders(){
+        var low=state.products.filter(function(p){return p.stock<=p.min});
+        if(!low.length){$('orderGroups').innerHTML='<div class="empty">✅ No hay productos pendientes de pedir.</div>';return}
+        var groups={};low.forEach(function(p){var key=p.supplier||'Sin proveedor asignado';(groups[key]||(groups[key]=[])).push(p)});
+        $('orderGroups').innerHTML=Object.keys(groups).map(function(supplier){
+          var items=groups[supplier],phone=items.find(function(p){return p.phone})||{};
+          return '<section class="supplier"><div class="supplier-head"><div><h3>🏪 '+esc(supplier)+'</h3><p class="small">'+(phone.phone?'WhatsApp: '+esc(phone.phone):'Añade el teléfono para abrir el chat directo')+'</p></div><button class="primary" data-whatsapp="'+esc(supplier)+'">Enviar por WhatsApp</button></div>'+items.map(function(p){var rec=Math.max(1,p.ideal-p.stock);return '<div class="order-line"><div><strong>'+esc(p.emoji||'📦')+' '+esc(p.name)+'</strong><div class="warning">Quedan '+unitText(p,p.stock)+' · mínimo '+niceNumber(p.min)+'</div></div><div class="order-qty"><span>Pedir</span><input class="field order-input" type="number" min="0" step="0.1" value="'+niceNumber(rec)+'" data-order-id="'+p.id+'"><span>'+esc(p.unit)+'</span></div></div>'}).join('')+'<div class="button-row" style="margin-top:12px"><button class="secondary" data-received="'+esc(supplier)+'">✓ Marcar pedido recibido</button></div></section>'
+        }).join('')
+      }
+      function renderHistory(){
+        var rows=state.history.slice().reverse();
+        $('historyList').innerHTML=rows.length?rows.map(function(h){return '<div class="history-row"><span>'+esc(h.date)+'</span><strong>'+esc(h.product)+'</strong><span class="'+(h.change>=0?'positive':'negative')+'">'+(h.change>0?'+':'')+niceNumber(h.change)+' '+esc(h.unit)+'</span><span class="history-note muted">'+esc(h.note||'')+'</span></div>'}).join(''):'<div class="empty">Todavía no hay movimientos.</div>'
+      }
+      function renderAll(){renderFilters();renderProducts();renderOrders();renderHistory();save()}
+      function addHistory(p,change,note){state.history.push({date:new Date().toLocaleString('es-ES'),product:p.name,change:change,unit:p.unit,note:note});if(state.history.length>500)state.history=state.history.slice(-500)}
+      function changeStock(id,delta,note){
+        var p=state.products.find(function(x){return x.id===id});if(!p)return;
+        var old=p.stock;p.stock=Math.max(0,Math.round((p.stock+delta)*100)/100);var real=p.stock-old;if(!real)return;
+        addHistory(p,real,note||'Cambio rápido');if(old>p.min&&p.stock<=p.min)notifyLow(p);renderAll()
+      }
+      function notifyLow(p){if(notified[p.id])return;notified[p.id]=true;var text=p.name+': quedan '+unitText(p,p.stock);if(window.StockAndroid&&StockAndroid.notifyLowStock)StockAndroid.notifyLowStock('Stock bajo',text);toast('⚠️ '+text+'. Añadido a la lista de pedido.')}
+      function setTab(name){document.querySelectorAll('.tab').forEach(function(b){b.classList.toggle('active',b.dataset.tab===name)});document.querySelectorAll('.panel').forEach(function(p){p.hidden=p.id!=='panel-'+name});if(name==='orders')renderOrders();if(name==='history')renderHistory()}
+      function openModal(product){
+        $('productForm').reset();currentImage='';$('imagePreview').innerHTML='📦';$('editId').value='';$('modalTitle').textContent='Añadir producto';$('stockField').value=1;$('minField').value=1;$('idealField').value=4;
+        if(product){$('modalTitle').textContent='Editar producto';$('editId').value=product.id;$('nameField').value=product.name;$('categoryField').value=product.category;$('unitField').value=product.unit;$('stockField').value=product.stock;$('minField').value=product.min;$('idealField').value=product.ideal;$('supplierField').value=product.supplier||'';$('phoneField').value=product.phone||'';$('imageUrlField').value=product.image&&product.image.indexOf('data:')!==0?product.image:'';currentImage=product.image||'';$('imagePreview').innerHTML=productImage(product)}
+        $('productModal').hidden=false;$('nameField').focus()
+      }
+      function closeModal(){$('productModal').hidden=true}
+      function updatePreview(src){currentImage=src||'';$('imagePreview').innerHTML=src?'<img src="'+esc(src)+'" alt="Vista previa">':'📦'}
+      function orderDataForSupplier(supplier){var result=[];document.querySelectorAll('[data-order-id]').forEach(function(input){var p=state.products.find(function(x){return x.id===input.dataset.orderId});if(p&&(p.supplier||'Sin proveedor asignado')===supplier){var qty=Number(input.value)||0;if(qty>0)result.push({p:p,qty:qty})}});return result}
+      function sendWhatsApp(supplier){
+        var items=orderDataForSupplier(supplier);if(!items.length){toast('No hay cantidades para pedir.');return}
+        var phone=(items.find(function(x){return x.p.phone})||{p:{phone:''}}).p.phone||'';
+        var message='Buenos días, necesito realizar el siguiente pedido:\n\n'+items.map(function(x){return '• '+niceNumber(x.qty)+' '+x.p.unit+' de '+x.p.name}).join('\n')+'\n\nMuchas gracias.\nLa Pollería 2.0';
+        if(window.StockAndroid&&StockAndroid.shareWhatsApp)StockAndroid.shareWhatsApp(phone,message);else window.open('https://wa.me/'+phone.replace(/\D/g,'')+'?text='+encodeURIComponent(message),'_blank')
+      }
+      document.querySelectorAll('.tab').forEach(function(b){b.addEventListener('click',function(){setTab(b.dataset.tab)})});
+      document.querySelectorAll('[data-go]').forEach(function(b){b.addEventListener('click',function(){setTab(b.dataset.go)})});
+      $('search').addEventListener('input',renderProducts);$('categoryFilter').addEventListener('change',renderProducts);
+      $('newProduct').addEventListener('click',function(){openModal()});$('newTop').addEventListener('click',function(){openModal()});$('openProductForm').addEventListener('click',function(){openModal()});
+      $('closeModal').addEventListener('click',closeModal);$('cancelModal').addEventListener('click',closeModal);$('productModal').addEventListener('click',function(e){if(e.target===$('productModal'))closeModal()});
+      $('productGrid').addEventListener('click',function(e){
+        var b=e.target.closest('button');if(!b)return;
+        if(b.dataset.change){changeStock(b.dataset.id,Number(b.dataset.change),'Cambio rápido')}
+        else if(b.dataset.edit){openModal(state.products.find(function(p){return p.id===b.dataset.edit}))}
+        else if(b.dataset.adjust){var p=state.products.find(function(x){return x.id===b.dataset.adjust});var value=prompt('Cantidad real de '+p.name+':',p.stock);if(value!==null&&!isNaN(Number(value))&&Number(value)>=0){var old=p.stock;p.stock=Number(value);addHistory(p,p.stock-old,'Corrección de inventario');renderAll();toast('Stock corregido.')}}
+      });
+      $('productForm').addEventListener('submit',function(e){
+        e.preventDefault();var id=$('editId').value;var old=id?state.products.find(function(p){return p.id===id}):null;var url=$('imageUrlField').value.trim();var image=currentImage||url;
+        var p={id:id||('p'+Date.now()),name:$('nameField').value.trim(),category:$('categoryField').value.trim(),unit:$('unitField').value,stock:Number($('stockField').value),min:Number($('minField').value),ideal:Number($('idealField').value),supplier:$('supplierField').value.trim(),phone:$('phoneField').value.trim(),emoji:old?old.emoji:'📦',image:image};
+        if(p.ideal<p.min){toast('El stock ideal debe ser igual o mayor que el mínimo.');return}
+        if(old){var index=state.products.indexOf(old);state.products[index]=p;if(old.stock!==p.stock)addHistory(p,p.stock-old.stock,'Modificación de ficha')}else{state.products.push(p);addHistory(p,p.stock,'Alta de producto')}
+        closeModal();renderAll();toast('✅ Producto guardado correctamente.')
+      });
+      $('imageFile').addEventListener('change',function(){var file=this.files&&this.files[0];if(!file)return;var reader=new FileReader();reader.onload=function(){updatePreview(reader.result)};reader.readAsDataURL(file)});
+      $('imageUrlField').addEventListener('change',function(){if(this.value.trim())updatePreview(this.value.trim())});
+      $('clearImage').addEventListener('click',function(){updatePreview('');$('imageUrlField').value='';$('imageFile').value=''});
+      $('searchImage').addEventListener('click',function(){var q=$('nameField').value.trim()||'producto';if(window.StockAndroid&&StockAndroid.searchImage)StockAndroid.searchImage(q);else window.open('https://www.google.com/search?tbm=isch&q='+encodeURIComponent(q),'_blank');toast('Guarda la imagen y después elige “Elegir de la tablet”.')});
+      $('orderGroups').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;if(b.dataset.whatsapp)sendWhatsApp(b.dataset.whatsapp);if(b.dataset.received){var items=orderDataForSupplier(b.dataset.received);items.forEach(function(x){var old=x.p.stock;x.p.stock=Math.round((x.p.stock+x.qty)*100)/100;addHistory(x.p,x.p.stock-old,'Pedido recibido')});renderAll();toast('✅ Pedido recibido y stock actualizado.')}});
+      $('clearHistory').addEventListener('click',function(){if(confirm('¿Seguro que quieres borrar todo el historial?')){state.history=[];renderAll();toast('Historial borrado.')}});
+      function backup(){var data=JSON.stringify({version:1,createdAt:new Date().toISOString(),data:state});if(window.StockAndroid&&StockAndroid.exportBackup)StockAndroid.exportBackup(data);else{var blob=new Blob([data],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='copia-stock-polleria.json';a.click()}}
+      function restore(){if(window.StockAndroid&&StockAndroid.importBackup)StockAndroid.importBackup();else $('restoreFile').click()}
+      $('backupTop').addEventListener('click',backup);$('backupBtn').addEventListener('click',backup);$('restoreBtn').addEventListener('click',restore);
+      $('testNotification').addEventListener('click',function(){if(window.StockAndroid&&StockAndroid.notifyLowStock)StockAndroid.notifyLowStock('Prueba de aviso','La aplicación de stock funciona correctamente');toast('🔔 Aviso enviado a la tablet.')});
+      window.backupSaved=function(){state.lastBackup=new Date().toISOString();save();toast('💾 Copia guardada correctamente.')};
+      window.nativeError=function(message){toast('No se pudo completar: '+message)};
+      window.restoreStockBackup=function(json){try{var parsed=JSON.parse(json);var restored=parsed.data||parsed;if(!restored||!Array.isArray(restored.products))throw new Error('Archivo no válido');state=restored;save();renderAll();toast('✅ Copia restaurada correctamente.')}catch(e){toast('El archivo de copia no es válido.')}};
+      renderAll();
+    })();
+  </script>
+</body>
+</html>
