@@ -105,7 +105,8 @@
           <label>Proveedor<input class="field" id="supplierField" placeholder="Ej. Proveedor de envases"></label>
           <label>Teléfono o WhatsApp del proveedor<input class="field" id="phoneField" inputmode="tel" placeholder="Ej. 34600000000"></label>
           <label class="wide switch-row"><input id="expiryTrackedField" type="checkbox"><span><strong>Controlar caducidad de este producto</strong><small class="small" style="display:block">Actívalo para elaborados; no afecta a envases, material ni salsas.</small></span></label>
-          <label id="shelfLifeLabel">Caducidad habitual (días)<input class="field" id="shelfLifeField" type="number" min="0" step="1" value="6"></label>
+          <label id="shelfLifeLabel">Caducidad una vez abierto o elaborado (días)<input class="field" id="shelfLifeField" type="number" min="0" step="1" value="6"></label>
+          <label class="wide switch-row" id="sealedExpiryLabel"><input id="sealedExpiryField" type="checkbox"><span><strong>Controlar también la caducidad sin abrir</strong><small class="small" style="display:block">Si lo activas, el botón + pedirá la fecha que viene en el envase.</small></span></label>
           <div class="wide image-row"><div class="preview" id="imagePreview">📦</div><div><strong>Imagen del producto</strong><div class="image-buttons" style="margin-top:8px"><label class="secondary">🖼️ Elegir de la tablet<input class="file" id="imageFile" type="file" accept="image/*"></label><button class="secondary" type="button" id="searchImage">🔎 Buscar en Internet</button><button class="secondary" type="button" id="clearImage">Quitar imagen</button></div></div></div>
           <label class="wide">Enlace de imagen (opcional)<input class="field" id="imageUrlField" type="url" placeholder="https://…"></label>
         </div>
@@ -121,7 +122,7 @@
         <input id="movementId" type="hidden"><input id="movementMode" type="hidden">
         <div class="form-grid">
           <label>Cantidad<input class="field" id="movementQty" type="number" min="0.1" step="0.1" value="1" required></label>
-          <label>Fecha de caducidad<input class="field date-large" id="movementExpiry" type="date" required></label>
+          <label><span id="movementExpiryLabel">Caducidad una vez abierto o elaborado</span><input class="field date-large" id="movementExpiry" type="date" required></label>
           <div class="wide expiry-help" id="movementHelp"></div>
           <label class="wide">Nota opcional<input class="field" id="movementNote" placeholder="Ej. lote nuevo, merma, caja abierta…"></label>
         </div>
@@ -139,8 +140,8 @@
           {id:'p1',name:'Bandeja negra grande',category:'Envases',unit:'fardos',stock:4,min:2,ideal:6,supplier:'Proveedor de envases',phone:'',emoji:'🥡',image:''},
           {id:'p2',name:'Guantes talla L',category:'Material',unit:'cajas',stock:3,min:1,ideal:5,supplier:'Proveedor de material',phone:'',emoji:'🧤',image:''},
           {id:'p3',name:'Bolsas pequeñas',category:'Material',unit:'paquetes',stock:6,min:2,ideal:8,supplier:'Proveedor de material',phone:'',emoji:'🛍️',image:''},
-          {id:'p4',name:'Villarroy',category:'Elaborados',unit:'cajas',stock:2,min:1,ideal:4,supplier:'Proveedor de elaborados',phone:'',emoji:'🍗',image:'',expiryTracked:true,shelfLifeDays:6,batches:[]},
-          {id:'p5',name:'San Jacobos',category:'Elaborados',unit:'cajas',stock:2,min:1,ideal:4,supplier:'Proveedor de elaborados',phone:'',emoji:'🧀',image:'',expiryTracked:true,shelfLifeDays:6,batches:[]},
+          {id:'p4',name:'Villarroy',category:'Elaborados',unit:'cajas',stock:2,min:1,ideal:4,supplier:'Proveedor de elaborados',phone:'',emoji:'🍗',image:'',expiryTracked:true,shelfLifeDays:6,trackSealedExpiry:false,batches:[],openedBatches:[]},
+          {id:'p5',name:'San Jacobos',category:'Elaborados',unit:'cajas',stock:2,min:1,ideal:4,supplier:'Proveedor de elaborados',phone:'',emoji:'🧀',image:'',expiryTracked:true,shelfLifeDays:6,trackSealedExpiry:false,batches:[],openedBatches:[]},
           {id:'p6',name:'Salsa miel y mostaza',category:'Salsas',unit:'botes',stock:1,min:1,ideal:4,supplier:'Proveedor de salsas',phone:'',emoji:'🍯',image:''}
         ],history:[],lastBackup:null
       };
@@ -156,8 +157,11 @@
         data.products.forEach(function(p){
           if(p.expiryTracked==null)p.expiryTracked=String(p.category||'').toLowerCase()==='elaborados';
           if(p.shelfLifeDays==null)p.shelfLifeDays=6;
+          if(p.trackSealedExpiry==null)p.trackSealedExpiry=false;
           if(!Array.isArray(p.batches))p.batches=[];
-          p.batches=p.batches.filter(function(b){return Number(b.qty)>0&&b.expiry}).map(function(b){return {qty:Number(b.qty),expiry:b.expiry,created:b.created||new Date().toISOString()}});
+          if(!Array.isArray(p.openedBatches))p.openedBatches=[];
+          p.batches=p.batches.filter(function(b){return Number(b.qty)>0&&b.expiry}).map(function(b){return {id:b.id||('s'+Date.now()+Math.random()),qty:Number(b.qty),expiry:b.expiry,created:b.created||new Date().toISOString()}});
+          p.openedBatches=p.openedBatches.filter(function(b){return Number(b.qty)>0&&b.expiry}).map(function(b){return {id:b.id||('o'+Date.now()+Math.random()),qty:Number(b.qty),expiry:b.expiry,created:b.created||new Date().toISOString()}});
         });
         return data
       }
@@ -173,6 +177,8 @@
       function pendingQty(p){return Math.max(0,Math.round((Number(p.stock)-batchTotal(p))*100)/100)}
       function sortedBatches(p){return (p.batches||[]).filter(function(b){return b.qty>0}).slice().sort(function(a,b){return a.expiry.localeCompare(b.expiry)})}
       function nearestBatch(p){return sortedBatches(p)[0]||null}
+      function sortedOpened(p){return (p.openedBatches||[]).filter(function(b){return b.qty>0}).slice().sort(function(a,b){return a.expiry.localeCompare(b.expiry)})}
+      function nearestOpened(p){return sortedOpened(p)[0]||null}
       function expiryClass(value){var d=daysUntil(value);return d<0?'expired':d<=2?'soon':'ok'}
       function expiryText(value){var d=daysUntil(value);if(d<0)return 'CADUCADO · '+formatDate(value);if(d===0)return 'CADUCA HOY · '+formatDate(value);if(d===1)return 'CADUCA MAÑANA · '+formatDate(value);return 'Caduca '+formatDate(value)+' · '+d+' días'}
       function toast(text){$('toast').textContent=text;$('toast').classList.add('show');clearTimeout(toast.timer);toast.timer=setTimeout(function(){$('toast').classList.remove('show')},2600)}
@@ -184,7 +190,7 @@
         var products=state.products.filter(function(p){return (!q||p.name.toLowerCase().indexOf(q)>=0)&&(!cat||p.category===cat)});
         $('productGrid').innerHTML=products.length?products.map(function(p){
           var cls=p.stock<=0?'zero':p.stock<=p.min?'low':'';
-          var expiry='';if(p.expiryTracked){var b=nearestBatch(p);expiry=b?'<div class="expiry-pill '+expiryClass(b.expiry)+'">📅 '+expiryText(b.expiry)+'</div>':'<div class="expiry-pill pending">📅 Fecha pendiente'+(p.stock?' · '+unitText(p,pendingQty(p)):'')+'</div>'}
+          var expiry='';if(p.expiryTracked){var b=nearestOpened(p);expiry=b?'<div class="expiry-pill '+expiryClass(b.expiry)+'">📅 Abierto/elaborado: '+expiryText(b.expiry)+'</div>':'<div class="expiry-pill pending">📅 Al abrir o elaborar se pedirá la fecha</div>'}
           return '<article class="product '+cls+'"><div class="product-head"><div class="product-image">'+productImage(p)+'</div><div><div class="product-name">'+esc(p.name)+'</div><div class="small">'+esc(p.category)+' · por '+esc(p.unit)+'</div></div></div><div class="status"><span class="dot"></span>'+status(p)+'</div>'+expiry+'<div class="counter"><button data-change="-1" data-id="'+p.id+'" aria-label="Restar">−</button><div class="count">'+unitText(p,p.stock)+'</div><button class="plus" data-change="1" data-id="'+p.id+'" aria-label="Sumar">＋</button></div><div class="minimum">Avisar en '+unitText(p,p.min)+' · Ideal '+unitText(p,p.ideal)+'</div><div class="product-actions"><button class="secondary" data-adjust="'+p.id+'">Ajustar</button><button class="secondary" data-edit="'+p.id+'">Editar</button></div></article>'
         }).join(''):'<div class="empty">No hay productos con esta búsqueda.</div>';
         var low=state.products.filter(function(p){return p.stock<=p.min});
@@ -205,14 +211,14 @@
       }
       function renderExpiry(){
         var products=state.products.filter(function(p){return p.expiryTracked});
-        products.sort(function(a,b){var aa=nearestBatch(a),bb=nearestBatch(b);if(!aa&&!bb)return a.name.localeCompare(b.name);if(!aa)return 1;if(!bb)return -1;return aa.expiry.localeCompare(bb.expiry)});
+        products.sort(function(a,b){var aa=nearestOpened(a)||nearestBatch(a),bb=nearestOpened(b)||nearestBatch(b);if(!aa&&!bb)return a.name.localeCompare(b.name);if(!aa)return 1;if(!bb)return -1;return aa.expiry.localeCompare(bb.expiry)});
         var urgent=0;
         $('expiryList').innerHTML=products.length?products.map(function(p){
-          var batches=sortedBatches(p),nearest=batches[0],cls=nearest?expiryClass(nearest.expiry):'pending';if(nearest&&daysUntil(nearest.expiry)<=2)urgent++;
-          var batchHtml=batches.map(function(b){return '<span class="batch '+expiryClass(b.expiry)+'">'+niceNumber(b.qty)+' '+esc(p.unit)+' · '+formatDate(b.expiry)+'</span>'}).join('');
-          if(pendingQty(p)>0)batchHtml+='<span class="batch">⚠️ '+unitText(p,pendingQty(p))+' sin fecha</span>';
-          if(!batchHtml)batchHtml='<span class="muted">Sin existencias con fecha registrada</span>';
-          return '<article class="expiry-card '+cls+'"><div><div class="expiry-title"><span class="expiry-icon">'+esc(p.emoji||'🍗')+'</span><div><h3>'+esc(p.name)+'</h3><p class="small">Stock: '+unitText(p,p.stock)+' · '+(nearest?expiryText(nearest.expiry):'sin fecha registrada')+'</p></div></div><div class="expiry-batches">'+batchHtml+'</div></div><div class="button-row"><button class="secondary" data-expiry-in="'+p.id+'">＋ Entrada</button><button class="primary" data-expiry-out="'+p.id+'">− Descontar</button></div></article>'
+          var opened=sortedOpened(p),sealed=sortedBatches(p),nearest=opened[0]||sealed[0],cls=nearest?expiryClass(nearest.expiry):'pending';if(nearest&&daysUntil(nearest.expiry)<=2)urgent++;
+          var batchHtml=opened.map(function(b){return '<button class="batch '+expiryClass(b.expiry)+'" data-finish-batch="'+esc(b.id)+'" data-product-id="'+p.id+'">🍽️ Abierto/elaborado · '+niceNumber(b.qty)+' · '+formatDate(b.expiry)+' · ✓ terminado</button>'}).join('');
+          if(p.trackSealedExpiry)batchHtml+=sealed.map(function(b){return '<span class="batch '+expiryClass(b.expiry)+'">📦 Sin abrir · '+niceNumber(b.qty)+' · '+formatDate(b.expiry)+'</span>'}).join('');
+          if(!batchHtml)batchHtml='<span class="muted">Todavía no hay ningún producto abierto o elaborado con fecha.</span>';
+          return '<article class="expiry-card '+cls+'"><div><div class="expiry-title"><span class="expiry-icon">'+esc(p.emoji||'🍗')+'</span><div><h3>'+esc(p.name)+'</h3><p class="small">Stock sin abrir: '+unitText(p,p.stock)+' · '+(nearest?expiryText(nearest.expiry):'sin caducidades activas')+'</p></div></div><div class="expiry-batches">'+batchHtml+'</div></div><div class="button-row">'+(p.trackSealedExpiry?'<button class="secondary" data-expiry-in="'+p.id+'">＋ Entrada con fecha</button>':'<button class="secondary" data-stock-in="'+p.id+'">＋ Subir stock</button>')+'<button class="primary" data-expiry-out="'+p.id+'">− Abrir/elaborar</button></div></article>'
         }).join(''):'<div class="empty">Activa “Controlar caducidad” en la ficha de los productos elaborados.</div>';
         $('expiryBadge').textContent=urgent?'('+urgent+')':''
       }
@@ -225,10 +231,10 @@
       }
       function openMovement(p,mode){
         if(!p)return;$('movementForm').reset();$('movementId').value=p.id;$('movementMode').value=mode;$('movementQty').value=1;
-        var nearest=nearestBatch(p);$('movementExpiry').value=nearest?nearest.expiry:addDays(p.shelfLifeDays||6);
+        var nearest=nearestBatch(p);$('movementExpiry').value=mode==='out'?addDays(p.shelfLifeDays||6):(nearest?nearest.expiry:addDays(30));
         $('movementImage').innerHTML=productImage(p);$('movementName').textContent=p.name;$('movementStock').textContent='Stock actual: '+unitText(p,p.stock);
-        if(mode==='out'){$('movementTitle').textContent='Descontar elaborado';$('movementSubtitle').textContent='Comprueba la caducidad antes de retirar el producto.';$('confirmMovement').textContent='DESCONTAR';$('movementHelp').innerHTML=nearest?'📅 El lote más antiguo caduca el <strong>'+formatDate(nearest.expiry)+'</strong>. Puedes cambiar la fecha manualmente si la etiqueta indica otra.':'⚠️ Este stock todavía no tenía fecha. Indica la caducidad de lo que vas a retirar.'}
-        else{$('movementTitle').textContent='Añadir elaborado';$('movementSubtitle').textContent='Registra el nuevo lote sin salir del control de stock.';$('confirmMovement').textContent='AÑADIR AL STOCK';$('movementHelp').innerHTML='La fecha se calcula automáticamente a <strong>'+(p.shelfLifeDays||6)+' días</strong>, pero puedes escribir la fecha real manualmente.'}
+        if(mode==='out'){$('movementTitle').textContent='Abrir o elaborar producto';$('movementSubtitle').textContent='Se descontará del stock y comenzará su nueva caducidad.';$('movementExpiryLabel').textContent='Caducidad una vez abierto o elaborado';$('confirmMovement').textContent='DESCONTAR Y GUARDAR FECHA';$('movementHelp').innerHTML='La fecha se calcula automáticamente a <strong>'+(p.shelfLifeDays||6)+' días</strong>. Puedes cambiarla manualmente antes de confirmar.'}
+        else{$('movementTitle').textContent='Entrada con caducidad sin abrir';$('movementSubtitle').textContent='Registra la fecha indicada por el fabricante.';$('movementExpiryLabel').textContent='Caducidad sin abrir';$('confirmMovement').textContent='AÑADIR AL STOCK';$('movementHelp').innerHTML='Esta es la fecha del producto <strong>sin abrir</strong>. Cuando lo abras o elabores, el botón − pedirá la segunda fecha.'}
         $('movementModal').hidden=false;$('movementQty').focus()
       }
       function closeMovement(){$('movementModal').hidden=true}
@@ -241,24 +247,24 @@
         var p=state.products.find(function(x){return x.id===$('movementId').value}),mode=$('movementMode').value,qty=Number($('movementQty').value),expiry=$('movementExpiry').value,note=$('movementNote').value.trim();if(!p||!qty||qty<=0||!expiry)return;
         if(mode==='out'&&qty>p.stock){toast('No puedes descontar más cantidad de la que hay.');return}
         var old=p.stock;
-        if(mode==='in'){p.stock=Math.round((p.stock+qty)*100)/100;p.batches.push({qty:qty,expiry:expiry,created:new Date().toISOString()});addHistory(p,qty,'Entrada · caduca '+formatDate(expiry)+(note?' · '+note:''))}
-        else{p.stock=Math.max(0,Math.round((p.stock-qty)*100)/100);consumeBatches(p,qty,expiry);addHistory(p,-qty,'Salida · caducidad comprobada '+formatDate(expiry)+(note?' · '+note:''));if(old>p.min&&p.stock<=p.min)notifyLow(p)}
-        closeMovement();renderAll();toast(mode==='in'?'✅ Elaborado añadido con su caducidad.':'✅ Stock descontado y caducidad registrada.')
+        if(mode==='in'){p.stock=Math.round((p.stock+qty)*100)/100;p.batches.push({id:'s'+Date.now(),qty:qty,expiry:expiry,created:new Date().toISOString()});addHistory(p,qty,'Entrada sin abrir · caduca '+formatDate(expiry)+(note?' · '+note:''))}
+        else{p.stock=Math.max(0,Math.round((p.stock-qty)*100)/100);consumeBatches(p,qty,nearestBatch(p)?nearestBatch(p).expiry:'');p.openedBatches.push({id:'o'+Date.now(),qty:qty,expiry:expiry,created:new Date().toISOString()});addHistory(p,-qty,'Abierto/elaborado · caduca '+formatDate(expiry)+(note?' · '+note:''));if(old>p.min&&p.stock<=p.min)notifyLow(p)}
+        closeMovement();renderAll();toast(mode==='in'?'✅ Entrada guardada con caducidad sin abrir.':'✅ Descontado y guardada la caducidad una vez abierto/elaborado.')
       }
       function notifyLow(p){if(notified[p.id])return;notified[p.id]=true;var text=p.name+': quedan '+unitText(p,p.stock);if(window.StockAndroid&&StockAndroid.notifyLowStock)StockAndroid.notifyLowStock('Stock bajo',text);toast('⚠️ '+text+'. Añadido a la lista de pedido.')}
       function checkExpiryAlerts(){
         if(expiryNotified)return;expiryNotified=true;var urgent=[];
-        state.products.filter(function(p){return p.expiryTracked}).forEach(function(p){var b=nearestBatch(p);if(b&&daysUntil(b.expiry)<=1)urgent.push(p.name+' · '+expiryText(b.expiry))});
+        state.products.filter(function(p){return p.expiryTracked}).forEach(function(p){var b=nearestOpened(p)||nearestBatch(p);if(b&&daysUntil(b.expiry)<=1)urgent.push(p.name+' · '+expiryText(b.expiry))});
         if(urgent.length&&window.StockAndroid&&StockAndroid.notifyLowStock)StockAndroid.notifyLowStock('Caducidades de elaborados',urgent.slice(0,3).join(' · '))
       }
       function setTab(name){document.querySelectorAll('.tab').forEach(function(b){b.classList.toggle('active',b.dataset.tab===name)});document.querySelectorAll('.panel').forEach(function(p){p.hidden=p.id!=='panel-'+name});if(name==='orders')renderOrders();if(name==='history')renderHistory();if(name==='expiry')renderExpiry()}
       function openModal(product){
         $('productForm').reset();currentImage='';$('imagePreview').innerHTML='📦';$('editId').value='';$('modalTitle').textContent='Añadir producto';$('stockField').value=1;$('minField').value=1;$('idealField').value=4;$('shelfLifeField').value=6;
-        if(product){$('modalTitle').textContent='Editar producto';$('editId').value=product.id;$('nameField').value=product.name;$('categoryField').value=product.category;$('unitField').value=product.unit;$('stockField').value=product.stock;$('minField').value=product.min;$('idealField').value=product.ideal;$('supplierField').value=product.supplier||'';$('phoneField').value=product.phone||'';$('imageUrlField').value=product.image&&product.image.indexOf('data:')!==0?product.image:'';$('expiryTrackedField').checked=!!product.expiryTracked;$('shelfLifeField').value=product.shelfLifeDays||6;currentImage=product.image||'';$('imagePreview').innerHTML=productImage(product)}
+        if(product){$('modalTitle').textContent='Editar producto';$('editId').value=product.id;$('nameField').value=product.name;$('categoryField').value=product.category;$('unitField').value=product.unit;$('stockField').value=product.stock;$('minField').value=product.min;$('idealField').value=product.ideal;$('supplierField').value=product.supplier||'';$('phoneField').value=product.phone||'';$('imageUrlField').value=product.image&&product.image.indexOf('data:')!==0?product.image:'';$('expiryTrackedField').checked=!!product.expiryTracked;$('sealedExpiryField').checked=!!product.trackSealedExpiry;$('shelfLifeField').value=product.shelfLifeDays||6;currentImage=product.image||'';$('imagePreview').innerHTML=productImage(product)}
         toggleShelfLife();
         $('productModal').hidden=false;$('nameField').focus()
       }
-      function toggleShelfLife(){$('shelfLifeLabel').style.display=$('expiryTrackedField').checked?'flex':'none'}
+      function toggleShelfLife(){var show=$('expiryTrackedField').checked;$('shelfLifeLabel').style.display=show?'flex':'none';$('sealedExpiryLabel').style.display=show?'flex':'none';if(!show)$('sealedExpiryField').checked=false}
       function closeModal(){$('productModal').hidden=true}
       function updatePreview(src){currentImage=src||'';$('imagePreview').innerHTML=src?'<img src="'+esc(src)+'" alt="Vista previa">':'📦'}
       function orderDataForSupplier(supplier){var result=[];document.querySelectorAll('[data-order-id]').forEach(function(input){var p=state.products.find(function(x){return x.id===input.dataset.orderId});if(p&&(p.supplier||'Sin proveedor asignado')===supplier){var qty=Number(input.value)||0;if(qty>0)result.push({p:p,qty:qty})}});return result}
@@ -278,14 +284,14 @@
       $('movementForm').addEventListener('submit',function(e){e.preventDefault();submitMovement()});
       $('productGrid').addEventListener('click',function(e){
         var b=e.target.closest('button');if(!b)return;
-        if(b.dataset.change){var cp=state.products.find(function(p){return p.id===b.dataset.id});if(cp&&cp.expiryTracked)openMovement(cp,Number(b.dataset.change)<0?'out':'in');else changeStock(b.dataset.id,Number(b.dataset.change),'Cambio rápido')}
+        if(b.dataset.change){var cp=state.products.find(function(p){return p.id===b.dataset.id});if(cp&&cp.expiryTracked&&Number(b.dataset.change)<0)openMovement(cp,'out');else if(cp&&cp.expiryTracked&&cp.trackSealedExpiry&&Number(b.dataset.change)>0)openMovement(cp,'in');else changeStock(b.dataset.id,Number(b.dataset.change),'Cambio rápido')}
         else if(b.dataset.edit){openModal(state.products.find(function(p){return p.id===b.dataset.edit}))}
         else if(b.dataset.adjust){var p=state.products.find(function(x){return x.id===b.dataset.adjust});var value=prompt('Cantidad real de '+p.name+':',p.stock);if(value!==null&&!isNaN(Number(value))&&Number(value)>=0){var old=p.stock;p.stock=Number(value);addHistory(p,p.stock-old,'Corrección de inventario');renderAll();toast('Stock corregido.')}}
       });
-      $('expiryList').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;var id=b.dataset.expiryIn||b.dataset.expiryOut;if(!id)return;openMovement(state.products.find(function(p){return p.id===id}),b.dataset.expiryIn?'in':'out')});
+      $('expiryList').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;if(b.dataset.finishBatch){var fp=state.products.find(function(p){return p.id===b.dataset.productId});if(fp&&confirm('¿Marcar esta partida como terminada o retirada?')){fp.openedBatches=fp.openedBatches.filter(function(x){return x.id!==b.dataset.finishBatch});renderAll();toast('✅ Partida retirada de caducidades.')}return}if(b.dataset.stockIn){changeStock(b.dataset.stockIn,1,'Entrada rápida');return}var id=b.dataset.expiryIn||b.dataset.expiryOut;if(!id)return;openMovement(state.products.find(function(p){return p.id===id}),b.dataset.expiryIn?'in':'out')});
       $('productForm').addEventListener('submit',function(e){
         e.preventDefault();var id=$('editId').value;var old=id?state.products.find(function(p){return p.id===id}):null;var url=$('imageUrlField').value.trim();var image=currentImage||url;
-        var p={id:id||('p'+Date.now()),name:$('nameField').value.trim(),category:$('categoryField').value.trim(),unit:$('unitField').value,stock:Number($('stockField').value),min:Number($('minField').value),ideal:Number($('idealField').value),supplier:$('supplierField').value.trim(),phone:$('phoneField').value.trim(),emoji:old?old.emoji:'📦',image:image,expiryTracked:$('expiryTrackedField').checked,shelfLifeDays:Number($('shelfLifeField').value)||6,batches:old&&Array.isArray(old.batches)?old.batches:[]};
+        var p={id:id||('p'+Date.now()),name:$('nameField').value.trim(),category:$('categoryField').value.trim(),unit:$('unitField').value,stock:Number($('stockField').value),min:Number($('minField').value),ideal:Number($('idealField').value),supplier:$('supplierField').value.trim(),phone:$('phoneField').value.trim(),emoji:old?old.emoji:'📦',image:image,expiryTracked:$('expiryTrackedField').checked,shelfLifeDays:Number($('shelfLifeField').value)||6,trackSealedExpiry:$('sealedExpiryField').checked,batches:old&&Array.isArray(old.batches)?old.batches:[],openedBatches:old&&Array.isArray(old.openedBatches)?old.openedBatches:[]};
         if(p.ideal<p.min){toast('El stock ideal debe ser igual o mayor que el mínimo.');return}
         if(old){var index=state.products.indexOf(old);state.products[index]=p;if(old.stock!==p.stock)addHistory(p,p.stock-old.stock,'Modificación de ficha')}else{state.products.push(p);addHistory(p,p.stock,'Alta de producto')}
         closeModal();renderAll();toast('✅ Producto guardado correctamente.')
@@ -296,7 +302,7 @@
       $('searchImage').addEventListener('click',function(){var q=$('nameField').value.trim()||'producto';if(window.StockAndroid&&StockAndroid.searchImage)StockAndroid.searchImage(q);else window.open('https://www.google.com/search?tbm=isch&q='+encodeURIComponent(q),'_blank');toast('Guarda la imagen y después elige “Elegir de la tablet”.')});
       $('orderGroups').addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;if(b.dataset.whatsapp)sendWhatsApp(b.dataset.whatsapp);if(b.dataset.received){var items=orderDataForSupplier(b.dataset.received);items.forEach(function(x){var old=x.p.stock;x.p.stock=Math.round((x.p.stock+x.qty)*100)/100;addHistory(x.p,x.p.stock-old,'Pedido recibido')});renderAll();toast('✅ Pedido recibido y stock actualizado.')}});
       $('clearHistory').addEventListener('click',function(){if(confirm('¿Seguro que quieres borrar todo el historial?')){state.history=[];renderAll();toast('Historial borrado.')}});
-      function backup(){var data=JSON.stringify({version:2,createdAt:new Date().toISOString(),data:state});if(window.StockAndroid&&StockAndroid.exportBackup)StockAndroid.exportBackup(data);else{var blob=new Blob([data],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='copia-stock-polleria-v2.json';a.click()}}
+      function backup(){var data=JSON.stringify({version:3,createdAt:new Date().toISOString(),data:state});if(window.StockAndroid&&StockAndroid.exportBackup)StockAndroid.exportBackup(data);else{var blob=new Blob([data],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='copia-stock-polleria-v2-1.json';a.click()}}
       function restore(){if(window.StockAndroid&&StockAndroid.importBackup)StockAndroid.importBackup();else $('restoreFile').click()}
       $('backupTop').addEventListener('click',backup);$('backupBtn').addEventListener('click',backup);$('restoreBtn').addEventListener('click',restore);
       $('testNotification').addEventListener('click',function(){if(window.StockAndroid&&StockAndroid.notifyLowStock)StockAndroid.notifyLowStock('Prueba de aviso','La aplicación de stock funciona correctamente');toast('🔔 Aviso enviado a la tablet.')});
