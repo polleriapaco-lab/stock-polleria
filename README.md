@@ -11,3 +11,7 @@ Integra el control de caducidades de los productos elaborados. Al añadir o desc
 ### Ajuste 2.1
 
 Por defecto, aumentar stock no solicita fecha. Al descontar se registra la caducidad una vez abierto o elaborado. Cada producto puede activar opcionalmente un segundo control para la caducidad sin abrir; en ese modo se guardan y muestran ambas fechas por separado.
+
+### Ajuste 2.2
+
+Simplifica las caducidades con un botón FECHAS independiente. La fecha sin abrir y la fecha una vez abierto o elaborado se escriben manualmente, sin cálculo obligatorio de seis días. Los botones + y - vuelven a dedicarse únicamente a cambiar el stock.
